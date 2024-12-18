@@ -37,7 +37,6 @@ Dotenv
 Typescript
 Cors
 Zod
-Joi
 Node.js 
 MongoDB 
 Steps to Set Up Locally
@@ -61,15 +60,15 @@ Access the Application: Open your browser and go to http://localhost:5000.
 CRUD Operations:
 Products:
 
-POST /api/products/create-product: Create a Bicycle.
-GET /api/products/: Get All Bicycles.
-GET /api/products/:id:Get a Specific Bicycle.
-PUT /api/products/:id: Update a Bicycle by ID.
-DELETE /api/products/:id:  Delete a Bicycle by ID.
+POST /api/products: Create a Bicycle.
+GET /api/products: Get All Bicycles.
+GET /api/products/:ProductId:Get a Specific Bicycle.
+PUT /api/products/:ProductId: Update a Bicycle by ID.
+DELETE /api/products/:ProductId:  Delete a Bicycle by ID.
 
 Orders:
 
-POST /api/orders/order: Order a Bicycle.
+POST /api/orders: Order a Bicycle.
 Get /api/orders/revenue: Calculate Revenue from Orders (Aggregation)
 
 Technologies Used

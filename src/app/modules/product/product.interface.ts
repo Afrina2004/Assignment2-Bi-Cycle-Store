@@ -7,12 +7,10 @@ import { Types } from 'mongoose';
     name: string;
     brand: string;
     price: number;
-    type: "Mountain" | "Road" | "Hybrid" | "BMX" | "Electric";
+    type: "Mountain" | "Road" | "Hybrid" | "BMX" | "Electric" ;
     description: string;
     quantity: number;
     inStock: boolean;
-    quantitySold: number;
-    isDeleted: boolean;
   }
 
   export interface ProductModel extends Model<TProduct> {

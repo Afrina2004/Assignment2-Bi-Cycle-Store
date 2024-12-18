@@ -2,52 +2,65 @@ import { Request, Response, RequestHandler } from 'express';
 import { z } from 'zod';
 import { createOrderSchema } from './order.validation'; 
 import OrderModel from './order.model';
+import { ProductServices } from '../product/product.service';
 
 const createOrder: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const validatedData = createOrderSchema.parse(req.body);
 
-    const order = new OrderModel({
-      email: validatedData.email,
-      product: validatedData.product,
-      quantity: validatedData.quantity,
-      totalPrice: validatedData.totalPrice,
+    const { product, quantity, email, totalPrice } = validatedData;
+
+    const updatedProduct = await ProductServices.updateProductInventory(product, quantity);
+
+    
+   const Order = new OrderModel({
+      email,
+      product: product,
+      quantity,
+      totalPrice,
     });
 
-    const savedOrder = await order.save();
+    const savedOrder = await Order.save();
 
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
       data: savedOrder,
     });
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      const formattedError = {
-        message: 'Validation failed',
-        success: false,
-        error: {
-          name: 'Validation error',
-          errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
-              message: curr.message,
-              name: 'Validation error',
-              properties: {
+} catch (error: any) {
+      if (error instanceof z.ZodError) {
+        const formattedError = {
+          message: 'Validation failed',
+          success: false,
+          error: {
+            name: 'Validation error',
+            errors: error.errors.reduce((acc: any, curr: any) => {
+              const field = curr.path?.[0]; 
+              const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+              const value = req.body[field] || null;
+    
+              acc[field || 'unknown'] = {
                 message: curr.message,
-                type: errorType,
-                min: curr.code === 'too_small' ? 0 : undefined,
-              },
-              kind: errorType,
-              path: curr.path,
-              value: req.body.product[curr.path[0]],
-            };
-            return acc;
-          }, {}),
-        },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
+                name: 'Validation error',
+                properties: {
+                  message: curr.message,
+                  type: errorType,
+                  min: curr.code === 'too_small' ? 0 : undefined,
+                  max: curr.code === 'too_large' ? 100 : undefined,
+                },
+                kind: errorType,
+                path: curr.path,
+                value: value,
+              };
+    
+              return acc;
+            }, {}),
+          },
+          stack: error.stack || 'Something went wrong',
+        };
+    
+      res.status(400).json(formattedError); 
+      }
        else{
      res.status(500).json({
       message: 'Something went wrong',
@@ -56,8 +69,8 @@ const createOrder: RequestHandler = async (req: Request, res: Response): Promise
       stack: error.stack,
     });
    }
-  }
-};
+}
+}
 
 const calculateRevenue: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -70,7 +83,7 @@ const calculateRevenue: RequestHandler = async (req: Request, res: Response): Pr
       {
         $group: {
           _id: null, 
-          totalRevenue: { $sum: '$totalPrice' }, //
+          totalRevenue: { $sum: '$totalPrice' },
         },
       },
     ]);
@@ -85,32 +98,39 @@ const calculateRevenue: RequestHandler = async (req: Request, res: Response): Pr
       },
     });
   } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      const formattedError = {
-        message: 'Validation failed',
-        success: false,
-        error: {
-          name: 'Validation error',
-          errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
-              message: curr.message,
-              name: 'Validation error',
-              properties: {
+      if (error instanceof z.ZodError) {
+        const formattedError = {
+          message: 'Validation failed',
+          success: false,
+          error: {
+            name: 'Validation error',
+            errors: error.errors.reduce((acc: any, curr: any) => {
+              const field = curr.path?.[0]; 
+              const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+              const value = req.body[field] || null;
+    
+              acc[field || 'unknown'] = {
                 message: curr.message,
-                type: errorType,
-                min: curr.code === 'too_small' ? 0 : undefined,
-              },
-              kind: errorType,
-              path: curr.path,
-              value: req.body.product[curr.path[0]],
-            };
-            return acc;
-          }, {}),
-        },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
+                name: 'Validation error',
+                properties: {
+                  message: curr.message,
+                  type: errorType,
+                  min: curr.code === 'too_small' ? 0 : undefined,
+                  max: curr.code === 'too_large' ? 100 : undefined,
+                },
+                kind: errorType,
+                path: curr.path,
+                value: value,
+              };
+    
+              return acc;
+            }, {}),
+          },
+          stack: error.stack || 'Something went wrong',
+        };
+    
+      res.status(400).json(formattedError); 
+      }
        else{
      res.status(500).json({
       message: 'Something went wrong',
@@ -126,4 +146,5 @@ const calculateRevenue: RequestHandler = async (req: Request, res: Response): Pr
 export const OrderController = {
   createOrder,
   calculateRevenue,
+  
 };

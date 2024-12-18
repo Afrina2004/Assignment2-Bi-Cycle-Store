@@ -51,49 +51,32 @@ const getASpecificBicycleFromDB = async (id: string) => {
 
 
 const deleteABicycleFromDB = async (id: string) => {
-  const result = await Product.updateOne(
-    {id},
-    { isDeleted: true },
-  );
+  const result = await Product.findByIdAndDelete(id)
+    
   if (!result) {
     throw new Error('Product not found!');
   }
   return result;
 };
 
-const calculateRevenueFromDB = async (productId: string) => {
-  const product = await Product.findById(productId); 
-
-  if (!product) {
-    throw new Error('Product not found');
-  }
-
-  const revenue = product.price * product.quantitySold;
-
-  return {
-    productId: product._id,
-    productName: product.name,
-    revenue,
-  };
-};
 
 
 const updateProductInventory = async (productId: string, quantity: number) => {
   const product = await Product.findById(productId);
-
   if (!product) {
     throw new Error('Product not found');
   }
 
-  if (product.quantity < quantity) {
-    throw new Error('Insufficient stock available');
-  }
-
-  product.quantity -= quantity;
-
+  
+if (product.quantity < quantity) {
+  throw new Error('Insufficient stock available');
+}
+product.quantity -= quantity;
+  
   if (product.quantity === 0) {
-    product.inStock = false;
+    product.inStock = false; 
   }
+
 
   await product.save();
 
@@ -107,6 +90,5 @@ export const ProductServices = {
   getAllBicyclesFromDB,
   getASpecificBicycleFromDB,
   deleteABicycleFromDB,
-  calculateRevenueFromDB,
   updateProductInventory,
 };

@@ -1,26 +1,33 @@
 import { Request, Response, NextFunction,RequestHandler } from 'express';
 import { ProductServices } from './product.service';
 import productValidationSchema from './product.validation';
+import updateProductSchema from './updateProduct.validation'; 
 import { Product } from './product.model';
-import { z } from 'zod';
+import {z} from 'zod';
 
 
 const createABicycle: RequestHandler= async (req: Request, res: Response, next: NextFunction): Promise<void>  => {
   try {
-    const { product: productData } = req.body;  
-   
-    const zodParsedData = productValidationSchema.parse(productData);
-    const newProduct = new Product(zodParsedData);
+    const { name, brand, price, type, description, quantity, inStock } = req.body;  
+    const validatedData = productValidationSchema.parse({
+      name,
+      brand,
+      price,
+      type,
+      description,
+      quantity,
+      inStock,
+    });
 
-    const result = await newProduct.save();
+    const newProduct = new Product(validatedData);
+     const result = await newProduct.save();
 
-  res.status(200).json({
-      success: true,
+     res.status(200).json({
       message: 'Bicycle is created successfully',
+      success: true,
       data: result,
     });
-  } 
-  catch (error: any) {
+  }catch (error: any) {
     if (error instanceof z.ZodError) {
       const formattedError = {
         message: 'Validation failed',
@@ -28,43 +35,63 @@ const createABicycle: RequestHandler= async (req: Request, res: Response, next: 
         error: {
           name: 'Validation error',
           errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
+            const field = curr.path?.[0]; 
+            const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+            const value = req.body[field] || null;
+  
+            acc[field || 'unknown'] = {
               message: curr.message,
               name: 'Validation error',
               properties: {
                 message: curr.message,
                 type: errorType,
                 min: curr.code === 'too_small' ? 0 : undefined,
+                max: curr.code === 'too_large' ? 100 : undefined,
               },
               kind: errorType,
               path: curr.path,
-              value: req.body.product[curr.path[0]],
+              value: value,
             };
+  
             return acc;
           }, {}),
         },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
-       else{
-     res.status(500).json({
-      message: 'Something went wrong',
-      success: false,
-      error: error.message || 'Internal server error',
-      stack: error.stack,
-    });
-   }
-  }
-};
+        stack: error.stack || 'Something went wrong',
+      };
+  
+    res.status(400).json(formattedError); 
+    }
+ else{
+       res.status(500).json({
+        message: 'Something went wrong',
+        success: false,
+        error: error.message || 'Internal server error',
+        stack: error.stack,
+      });
+     }
+    }};
+  
+
 const getAllBicycles = async (req: Request, res: Response) => {
   try {
     const result = await ProductServices.getAllBicyclesFromDB();
+    const { searchTerm } = req.query;
+ const filter: any = {};
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm as string, 'i'); 
+      filter.$or = [
+        { name: regex },
+        { brand: regex },
+        { type: regex },
+      ];
+    }
+
+    const bicycles = await Product.find(filter);
 
     res.status(200).json({
-      success: true,
       message: 'Bicycle retrieved successfully',
-      data: result,
+      status: true,
+      data: bicycles,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -74,26 +101,33 @@ const getAllBicycles = async (req: Request, res: Response) => {
         error: {
           name: 'Validation error',
           errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
+            const field = curr.path?.[0]; 
+            const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+            const value = req.body[field] || null;
+  
+            acc[field || 'unknown'] = {
               message: curr.message,
               name: 'Validation error',
               properties: {
                 message: curr.message,
                 type: errorType,
                 min: curr.code === 'too_small' ? 0 : undefined,
+                max: curr.code === 'too_large' ? 100 : undefined,
               },
               kind: errorType,
               path: curr.path,
-              value: req.body.product[curr.path[0]],
+              value: value,
             };
+  
             return acc;
           }, {}),
         },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
-       else{
+        stack: error.stack || 'Something went wrong',
+      };
+  
+    res.status(400).json(formattedError); 
+    }
+    else{
      res.status(500).json({
       message: 'Something went wrong',
       success: false,
@@ -111,8 +145,8 @@ const getASpecificBicycle = async (req: Request, res: Response) => {
     const result = await ProductServices.getASpecificBicycleFromDB(id);
 
     res.status(200).json({
-      success: true,
       message: 'Bicycle retrieved successfully',
+      status: true,
       data: result,
     });
   } catch (error: any) {
@@ -123,25 +157,32 @@ const getASpecificBicycle = async (req: Request, res: Response) => {
         error: {
           name: 'Validation error',
           errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
+            const field = curr.path?.[0]; 
+            const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+            const value = req.body[field] || null;
+  
+            acc[field || 'unknown'] = {
               message: curr.message,
               name: 'Validation error',
               properties: {
                 message: curr.message,
                 type: errorType,
                 min: curr.code === 'too_small' ? 0 : undefined,
+                max: curr.code === 'too_large' ? 100 : undefined,
               },
               kind: errorType,
               path: curr.path,
-              value: req.body.product[curr.path[0]],
+              value: value,
             };
+  
             return acc;
           }, {}),
         },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
+        stack: error.stack || 'Something went wrong',
+      };
+  
+    res.status(400).json(formattedError); 
+    }
        else{
      res.status(500).json({
       message: 'Something went wrong',
@@ -153,15 +194,6 @@ const getASpecificBicycle = async (req: Request, res: Response) => {
   }
 };
 
-const updateProductSchema = z.object({
-  body: z.object({
-    price: z.number().positive().optional(),
-    quantity: z.number().int().positive().optional(),
-  }),
-  params: z.object({
-    id: z.string().min(24).max(24), 
-  }),
-});
 const updateABicycle = async (req: Request, res: Response) => {
   try {
   
@@ -185,27 +217,33 @@ const updateABicycle = async (req: Request, res: Response) => {
         error: {
           name: 'Validation error',
           errors: error.errors.reduce((acc: any, curr: any) => {
-            const field = curr.path[0];
-            const errorType = curr.code === 'too_small' ? 'min' : curr.code;
-            acc[field] = {
+            const field = curr.path?.[0]; 
+            const errorType = curr.code === 'too_small' ? 'min' : curr.code === 'too_large' ? 'max' : curr.code;
+            const value = req.body[field] || null;
+  
+            acc[field || 'unknown'] = {
               message: curr.message,
               name: 'Validation error',
               properties: {
                 message: curr.message,
                 type: errorType,
                 min: curr.code === 'too_small' ? 0 : undefined,
+                max: curr.code === 'too_large' ? 100 : undefined,
               },
               kind: errorType,
               path: curr.path,
-              value: req.body.product,
+              value: value,
             };
+  
             return acc;
           }, {}),
         },
-        stack: error.stack || 'Something went wrong',};
- res.status(400).json(formattedError); }
-       
- else{
+        stack: error.stack || 'Something went wrong',
+      };
+  
+    res.status(400).json(formattedError); 
+    }
+else{
      res.status(500).json({
       message: 'Something went wrong',
       success: false,
@@ -216,11 +254,9 @@ const updateABicycle = async (req: Request, res: Response) => {
   }
 };
 
-
 const deleteABicycle = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-
+    const { id  } = req.params;
     const result = await ProductServices.deleteABicycleFromDB(id); 
 
    res.status(200).json({
@@ -228,6 +264,7 @@ const deleteABicycle = async (req: Request, res: Response) => {
     status: true,
     data: {},
     });
+
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       const formattedError = {
